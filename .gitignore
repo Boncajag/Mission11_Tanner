@@ -1,0 +1,27 @@
+# Ignore Visual Studio and Rider files
+.vs/
+*.user
+*.suo
+*.cache
+*.vscode/
+bin/
+obj/
+*.db
+*.db-journal
+*.vsidx
+
+# Ignore build results
+bin/
+obj/
+out/
+*.dll
+*.exe
+*.pdb
+*.publish/
+*.log
+
+# Ignore npm packages
+node_modules/
+
+# Ignore environment files
+.env
