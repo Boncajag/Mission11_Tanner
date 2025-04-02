@@ -25,5 +25,15 @@ namespace Mission11_Tanner_Project.API.Controllers
             // Return the list of books with an HTTP 200 OK response
             return Ok(books);
         }
+
+        [HttpGet("category/{category}")]
+        public ActionResult<IEnumerable<Book>> GetBooksByCategory(string category)
+        {
+            var books = _bookContext.Books
+                .Where(b => b.Category == category)
+                .ToList();
+
+            return Ok(books);
+        }
     }
 }
