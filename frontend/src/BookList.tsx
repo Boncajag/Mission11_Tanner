@@ -4,26 +4,18 @@ import { FaSortAlphaDown, FaSortAlphaUp } from 'react-icons/fa';
 import { Book } from './types/Book';
 import { useCart } from './CartContext';
 
-// Define the BookList component
 const BookList: React.FC = () => {
-  // State to store books
   const [books, setBooks] = useState<Book[]>([]);
-  // State for pagination
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [booksPerPage, setBooksPerPage] = useState<number>(5);
-  // State for sorting
   const [sortAscending, setSortAscending] = useState<boolean>(true);
-  // Cart context
   const { cart, addToCart } = useCart();
-  // State for showing the cart
   const [showCart, setShowCart] = useState<boolean>(false);
-  // State for modal (book details)
   const [showModal, setShowModal] = useState<boolean>(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
-  // State for cart messages
   const [cartMessage, setCartMessage] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
-  // Fetch books from API when component mounts
   useEffect(() => {
     fetch('https://localhost:7234/api/Bookstore')
       .then((response) => response.json())
@@ -31,64 +23,67 @@ const BookList: React.FC = () => {
       .catch((error) => console.error('Error fetching books:', error));
   }, []);
 
-  // Sort books based on title
-  const sortedBooks = [...books].sort((a, b) => {
+  // Get unique categories
+  const categories = ['All', ...new Set(books.map(book => book.category))];
+
+  // Filter books based on category
+  const filteredBooks = selectedCategory === 'All'
+    ? books
+    : books.filter(book => book.category === selectedCategory);
+
+  // Sort books
+  const sortedBooks = [...filteredBooks].sort((a, b) => {
     return sortAscending
       ? a.title.localeCompare(b.title)
       : b.title.localeCompare(a.title);
   });
 
-  // Pagination logic
+  // Handle pagination
   const indexOfLastBook = currentPage * booksPerPage;
   const indexOfFirstBook = indexOfLastBook - booksPerPage;
   const currentBooks = sortedBooks.slice(indexOfFirstBook, indexOfLastBook);
 
-  // Change page
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
-  // Handle changing results per page
   const handleResultsPerPageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setBooksPerPage(Number(e.target.value));
     setCurrentPage(1);
   };
 
-  // Toggle sort order
   const toggleSortOrder = () => setSortAscending(!sortAscending);
 
-  // Handle adding a book to cart
   const handleAddToCart = (book: Book) => {
     addToCart(book);
     setCartMessage(`${book.title} added to cart!`);
     setTimeout(() => setCartMessage(null), 3000);
   };
 
-  // Handle showing book details
   const handleShowDetails = (book: Book) => {
     setSelectedBook(book);
     setShowModal(true);
+  };
+
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedCategory(e.target.value);
+    setCurrentPage(1);
   };
 
   return (
     <div className="container mt-4">
       <h2 className="mb-3 text-center">Book List</h2>
 
-      {/* Display cart message */}
       {cartMessage && (
         <Alert variant="success" onClose={() => setCartMessage(null)} dismissible>
           {cartMessage}
         </Alert>
       )}
 
-      {/* Button to show cart */}
-      <Button
-        variant="primary"
-        className="mb-3"
-        onClick={() => setShowCart(true)}
-      >
+      {/* View Cart Button */}
+      <Button variant="primary" className="mb-3" onClick={() => setShowCart(true)}>
         View Cart
       </Button>
 
-      {/* Sort button */}
+      {/* Sort Button */}
       <button className="btn btn-primary mb-3 ms-2" onClick={toggleSortOrder}>
         {sortAscending ? (
           <>
@@ -101,7 +96,16 @@ const BookList: React.FC = () => {
         )}
       </button>
 
-      {/* Book table */}
+      {/* Category Filter Dropdown */}
+      <Form.Group className="mb-3">
+        <Form.Label>Filter by Category:</Form.Label>
+        <Form.Select value={selectedCategory} onChange={handleCategoryChange} style={{ width: '200px' }}>
+          {categories.map(category => (
+            <option key={category} value={category}>{category}</option>
+          ))}
+        </Form.Select>
+      </Form.Group>
+
       <Table striped bordered hover responsive>
         <thead>
           <tr>
@@ -128,7 +132,7 @@ const BookList: React.FC = () => {
               <td>{book.isbn}</td>
               <td>{book.classification}</td>
               <td>{book.pageCount}</td>
-              <td>{book.price.toFixed(2)}</td>
+              <td>${book.price.toFixed(2)}</td>
               <td>
                 <Button variant="success" onClick={() => handleAddToCart(book)}>
                   Add to Cart
@@ -139,7 +143,6 @@ const BookList: React.FC = () => {
         </tbody>
       </Table>
 
-      {/* Results per page dropdown */}
       <Form.Group className="mb-3">
         <Form.Label>Results per page:</Form.Label>
         <Form.Select
@@ -153,9 +156,9 @@ const BookList: React.FC = () => {
         </Form.Select>
       </Form.Group>
 
-      {/* Pagination controls */}
+      {/* Pagination */}
       <Pagination>
-        {Array.from({ length: Math.ceil(books.length / booksPerPage) }).map(
+        {Array.from({ length: Math.ceil(filteredBooks.length / booksPerPage) }).map(
           (_, index) => (
             <Pagination.Item
               key={index + 1}
@@ -168,7 +171,7 @@ const BookList: React.FC = () => {
         )}
       </Pagination>
 
-      {/* Offcanvas Cart Component */}
+      {/* Offcanvas Cart (Side Cart) */}
       <Offcanvas show={showCart} onHide={() => setShowCart(false)} placement="end">
         <Offcanvas.Header closeButton>
           <Offcanvas.Title>Your Cart</Offcanvas.Title>
@@ -185,11 +188,7 @@ const BookList: React.FC = () => {
               ))}
             </ListGroup>
           )}
-          <Button
-            variant="success"
-            className="mt-3"
-            onClick={() => setShowCart(false)}
-          >
+          <Button variant="success" className="mt-3" onClick={() => setShowCart(false)}>
             Proceed to Checkout
           </Button>
         </Offcanvas.Body>
