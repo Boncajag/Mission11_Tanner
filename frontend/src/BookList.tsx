@@ -1,65 +1,95 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Pagination, Form } from 'react-bootstrap';
+import { Table, Pagination, Form, Button, Offcanvas, ListGroup, Modal, Alert } from 'react-bootstrap';
 import { FaSortAlphaDown, FaSortAlphaUp } from 'react-icons/fa';
 import { Book } from './types/Book';
+import { useCart } from './CartContext';
 
 // Define the BookList component
 const BookList: React.FC = () => {
-  // State to hold the list of books fetched from the API
+  // State to store books
   const [books, setBooks] = useState<Book[]>([]);
-
-  // State to manage the current page in pagination
+  // State for pagination
   const [currentPage, setCurrentPage] = useState<number>(1);
-
-  // State to set how many books to display per page
   const [booksPerPage, setBooksPerPage] = useState<number>(5);
-
-  // State to determine sort order: true for ascending, false for descending
+  // State for sorting
   const [sortAscending, setSortAscending] = useState<boolean>(true);
+  // Cart context
+  const { cart, addToCart } = useCart();
+  // State for showing the cart
+  const [showCart, setShowCart] = useState<boolean>(false);
+  // State for modal (book details)
+  const [showModal, setShowModal] = useState<boolean>(false);
+  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  // State for cart messages
+  const [cartMessage, setCartMessage] = useState<string | null>(null);
 
-  // Fetch books from the API when the component loads
+  // Fetch books from API when component mounts
   useEffect(() => {
-    fetch('https://localhost:7234/api/Bookstore') // Fetch from API URL
-      .then((response) => response.json()) // Convert response to JSON
-      .then((data) => setBooks(data)) // Update books state with fetched data
-      .catch((error) => console.error('Error fetching books:', error)); // Handle errors
+    fetch('https://localhost:7234/api/Bookstore')
+      .then((response) => response.json())
+      .then((data) => setBooks(data))
+      .catch((error) => console.error('Error fetching books:', error));
   }, []);
 
-  // Sort books by title in ascending or descending order
+  // Sort books based on title
   const sortedBooks = [...books].sort((a, b) => {
     return sortAscending
-      ? a.title.localeCompare(b.title) // Ascending order
-      : b.title.localeCompare(a.title); // Descending order
+      ? a.title.localeCompare(b.title)
+      : b.title.localeCompare(a.title);
   });
 
-  // Calculate the index of the last book on the current page
+  // Pagination logic
   const indexOfLastBook = currentPage * booksPerPage;
-
-  // Calculate the index of the first book on the current page
   const indexOfFirstBook = indexOfLastBook - booksPerPage;
-
-  // Get the books to be displayed on the current page
   const currentBooks = sortedBooks.slice(indexOfFirstBook, indexOfLastBook);
 
-  // Change the page when a pagination button is clicked
+  // Change page
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
-  // Handle changes in the "Results per page" dropdown
+  // Handle changing results per page
   const handleResultsPerPageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setBooksPerPage(Number(e.target.value)); // Update books per page
-    setCurrentPage(1); // Reset to page 1 after changing results per page
+    setBooksPerPage(Number(e.target.value));
+    setCurrentPage(1);
   };
 
-  // Toggle between ascending and descending sort order
+  // Toggle sort order
   const toggleSortOrder = () => setSortAscending(!sortAscending);
+
+  // Handle adding a book to cart
+  const handleAddToCart = (book: Book) => {
+    addToCart(book);
+    setCartMessage(`${book.title} added to cart!`);
+    setTimeout(() => setCartMessage(null), 3000);
+  };
+
+  // Handle showing book details
+  const handleShowDetails = (book: Book) => {
+    setSelectedBook(book);
+    setShowModal(true);
+  };
 
   return (
     <div className="container mt-4">
-      {/* Page Title */}
-      <h2 className="mb-3 text-center">📚 Book List</h2>
+      <h2 className="mb-3 text-center">Book List</h2>
 
-      {/* Sort Button */}
-      <button className="btn btn-primary mb-3" onClick={toggleSortOrder}>
+      {/* Display cart message */}
+      {cartMessage && (
+        <Alert variant="success" onClose={() => setCartMessage(null)} dismissible>
+          {cartMessage}
+        </Alert>
+      )}
+
+      {/* Button to show cart */}
+      <Button
+        variant="primary"
+        className="mb-3"
+        onClick={() => setShowCart(true)}
+      >
+        View Cart
+      </Button>
+
+      {/* Sort button */}
+      <button className="btn btn-primary mb-3 ms-2" onClick={toggleSortOrder}>
         {sortAscending ? (
           <>
             Sort Ascending <FaSortAlphaDown />
@@ -71,7 +101,7 @@ const BookList: React.FC = () => {
         )}
       </button>
 
-      {/* Books Table */}
+      {/* Book table */}
       <Table striped bordered hover responsive>
         <thead>
           <tr>
@@ -82,25 +112,34 @@ const BookList: React.FC = () => {
             <th>Classification</th>
             <th>Page Count</th>
             <th>Price ($)</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>
-          {/* Render each book as a table row */}
           {currentBooks.map((book) => (
             <tr key={book.bookId}>
-              <td>{book.title}</td>
+              <td>
+                <Button variant="link" onClick={() => handleShowDetails(book)}>
+                  {book.title}
+                </Button>
+              </td>
               <td>{book.author}</td>
               <td>{book.publisher}</td>
               <td>{book.isbn}</td>
               <td>{book.classification}</td>
               <td>{book.pageCount}</td>
               <td>{book.price.toFixed(2)}</td>
+              <td>
+                <Button variant="success" onClick={() => handleAddToCart(book)}>
+                  Add to Cart
+                </Button>
+              </td>
             </tr>
           ))}
         </tbody>
       </Table>
 
-      {/* Results Per Page Dropdown */}
+      {/* Results per page dropdown */}
       <Form.Group className="mb-3">
         <Form.Label>Results per page:</Form.Label>
         <Form.Select
@@ -108,27 +147,78 @@ const BookList: React.FC = () => {
           onChange={handleResultsPerPageChange}
           style={{ width: '150px' }}
         >
-          {/* Dropdown options to set books per page */}
           <option value={5}>5</option>
           <option value={10}>10</option>
           <option value={15}>15</option>
         </Form.Select>
       </Form.Group>
 
-      {/* Pagination Buttons */}
+      {/* Pagination controls */}
       <Pagination>
         {Array.from({ length: Math.ceil(books.length / booksPerPage) }).map(
           (_, index) => (
             <Pagination.Item
-              key={index + 1} // Use index as key
-              onClick={() => paginate(index + 1)} // Go to selected page
-              active={index + 1 === currentPage} // Highlight active page
+              key={index + 1}
+              onClick={() => paginate(index + 1)}
+              active={index + 1 === currentPage}
             >
-              {index + 1} {/* Display page number */}
+              {index + 1}
             </Pagination.Item>
           )
         )}
       </Pagination>
+
+      {/* Offcanvas Cart Component */}
+      <Offcanvas show={showCart} onHide={() => setShowCart(false)} placement="end">
+        <Offcanvas.Header closeButton>
+          <Offcanvas.Title>Your Cart</Offcanvas.Title>
+        </Offcanvas.Header>
+        <Offcanvas.Body>
+          {cart.length === 0 ? (
+            <p>Your cart is empty</p>
+          ) : (
+            <ListGroup>
+              {cart.map((item, index) => (
+                <ListGroup.Item key={index}>
+                  {item.title} - ${item.price.toFixed(2)}
+                </ListGroup.Item>
+              ))}
+            </ListGroup>
+          )}
+          <Button
+            variant="success"
+            className="mt-3"
+            onClick={() => setShowCart(false)}
+          >
+            Proceed to Checkout
+          </Button>
+        </Offcanvas.Body>
+      </Offcanvas>
+
+      {/* Modal for Book Details */}
+      <Modal show={showModal} onHide={() => setShowModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Book Details</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {selectedBook && (
+            <div>
+              <p><strong>Title:</strong> {selectedBook.title}</p>
+              <p><strong>Author:</strong> {selectedBook.author}</p>
+              <p><strong>Publisher:</strong> {selectedBook.publisher}</p>
+              <p><strong>ISBN:</strong> {selectedBook.isbn}</p>
+              <p><strong>Classification:</strong> {selectedBook.classification}</p>
+              <p><strong>Page Count:</strong> {selectedBook.pageCount}</p>
+              <p><strong>Price:</strong> ${selectedBook.price.toFixed(2)}</p>
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowModal(false)}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };
