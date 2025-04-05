@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Mission11_Tanner_Project.API.Data;
 
 namespace Mission11_Tanner_Project.API.Controllers
@@ -35,5 +36,51 @@ namespace Mission11_Tanner_Project.API.Controllers
 
             return Ok(books);
         }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Book>> GetBookById(int id)
+        {
+            var book = await _bookContext.Books.FindAsync(id);
+
+            if (book == null)
+            {
+                return NotFound();
+            }
+
+            return book;
+        }
+
+        [HttpPost]
+        public async Task<ActionResult<Book>> AddBook(Book book)
+        {
+            _bookContext.Books.Add(book);
+            await _bookContext.SaveChangesAsync();
+            return CreatedAtAction(nameof(GetBookById), new { id = book.BookId }, book);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateBook(int id, Book book)
+        {
+            if (id != book.BookId)
+                return BadRequest();
+
+            _bookContext.Entry(book).State = EntityState.Modified;
+            await _bookContext.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteBook(int id)
+        {
+            var book = await _bookContext.Books.FindAsync(id);
+            if (book == null) return NotFound();
+
+            _bookContext.Books.Remove(book);
+            await _bookContext.SaveChangesAsync();
+
+            return NoContent();
+        }
+
     }
 }

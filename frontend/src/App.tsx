@@ -1,8 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
-import { CartProvider } from './CartContext';
-import BookList from './BookList';
-import Cart from './Cart';
+import { CartProvider } from './context/CartContext';
+import Bookstore from './pages/Bookstore';
+import Cart from './pages/Cart';
 
 const App: React.FC = () => {
   return (
@@ -34,7 +34,7 @@ const App: React.FC = () => {
 
           {/* Define Routes */}
           <Routes>
-            <Route path="/" element={<BookList />} />
+            <Route path="/" element={<Bookstore />} />
             <Route path="/cart" element={<Cart />} />
           </Routes>
         </div>

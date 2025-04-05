@@ -24,7 +24,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors(x => x.WithOrigins("http://localhost:5173"));
+app.UseCors(policy =>
+    policy.WithOrigins("http://localhost:5173")  // or your frontend's address
+          .AllowAnyMethod()
+          .AllowAnyHeader()
+);
+
 
 app.UseHttpsRedirection();
 
